@@ -1,31 +1,29 @@
-name: Close Issues
+name: Close Completed or Wontfix Issues
+
 on:
   schedule:
-    - cron: '0 0 * * *'
-  workflow_dispatch:
+    - cron: '*/10 * * * *'
 
 jobs:
-  close-issues:
+  close_issues:
     runs-on: ubuntu-latest
     steps:
-    - name: Close completed or wontfix issues
+    - name: Close issues with 'completed' or 'wontfix' label
       uses: actions/github-script@v6
       with:
         script: |
-          const issues = await github.paginate(github.issues.listForRepo, {
+          const issues = await github.issues.listForRepo({
             owner: context.repo.owner,
             repo: context.repo.repo,
-            state: 'open'
+            state: 'open',
+            labels: 'completed,wontfix' 
           });
 
-          for (const issue of issues) {
-            if (issue.labels.some(label => ['completed', 'wontfix'].includes(label.name))) {
-              await github.issues.update({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                issue_number: issue.number,
-                state: 'closed'
-              });
-              console.log(`Closed issue #${issue.number}`);
-            }
+          for (const issue of issues.data) {
+            await github.issues.update({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issue.number,
+              state: 'closed'
+            });
           }
