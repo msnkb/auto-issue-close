@@ -1,31 +1,31 @@
-name: Close completed or wontfix issues
-
+name: Close Issues
 on:
   schedule:
-    - cron: '0 * * * *' # Runs every hour
+    - cron: '0 0 * * *'
+  workflow_dispatch:
 
 jobs:
-  close_issues:
+  close-issues:
     runs-on: ubuntu-latest
-
     steps:
-    - name: Close Issues
+    - name: Close completed or wontfix issues
       uses: actions/github-script@v6
       with:
         script: |
-          const learn = require('@octokit/rest')
-          const octokit = new learn.Octokit({ auth: process.env.GITHUB_TOKEN })
-          const { data: issues } = await octokit.issues.listForRepo({
+          const issues = await github.paginate(github.issues.listForRepo, {
             owner: context.repo.owner,
             repo: context.repo.repo,
-            state: 'open',
-            labels: ['completed', 'wontfix']
-          })
+            state: 'open'
+          });
+
           for (const issue of issues) {
-            await octokit.issues.update({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              issue_number: issue.number,
-              state: 'closed'
-            })
+            if (issue.labels.some(label => ['completed', 'wontfix'].includes(label.name))) {
+              await github.issues.update({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issue.number,
+                state: 'closed'
+              });
+              console.log(`Closed issue #${issue.number}`);
+            }
           }
